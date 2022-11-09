@@ -50,12 +50,12 @@ isAlpha:
 	cmp	BYTE PTR -4[rbp], 96		# | Сравниваем ch (rbp[-4]) и 96 ('`' -- символ перед 'a')
 	jle	.L5							# | Если ch <= 96, переходим на метку .L5, в которой проверим второй операнд ||
 	cmp	BYTE PTR -4[rbp], 122		# | Иначе проверяем второй операнд &&: сравниваем ch (rbp[-4]) и 122 ('z')
-	jle	.L6							# | Если ch <= 122, то условие выполнено, можем не проверять второй операнд ||, поэтому переходим к возврату значения на метку .L6
+	jle	.L6							# | Если ch <= 122, то выражение истинно, можем не проверять второй операнд ||, поэтому переходим к возврату значения на метку .L6
 .L5:								# | В .L5 проверяем ('A' <= ch && ch <= 'Z')
 	cmp	BYTE PTR -4[rbp], 64		# | Сравниваем ch (rbp[-4]) и 64 ('@' -- символ перед 'A')
-	jle	.L7							# | Если ch <= 64, условие точно ложно, переходим на метку .L7 
+	jle	.L7							# | Если ch <= 64, выражение точно ложно, переходим на метку .L7 
 	cmp	BYTE PTR -4[rbp], 90		# | Сравниваем ch (rbp[-4]) и 90 ('Z')
-	jg	.L7							# | Если ch > 90, условие ложно, переходим на метку .L7
+	jg	.L7							# | Если ch > 90, выражение ложно, переходим на метку .L7
 .L6:
 	mov	eax, 1						# | Возвращаем 1 через eax 
 	jmp	.L9							# | Переходим к эпилогу
@@ -68,80 +68,83 @@ isAlpha:
 	.size	isAlpha, .-isAlpha
 	.globl	isAlphaOrNum
 	.type	isAlphaOrNum, @function
-isAlphaOrNum:
-	endbr64
-	push	rbp
-	mov	rbp, rsp
-	sub	rsp, 8
-	mov	eax, edi
-	mov	BYTE PTR -4[rbp], al
-	movsx	eax, BYTE PTR -4[rbp]
-	mov	edi, eax
-	call	isAlpha
-	test	eax, eax
-	jne	.L11
-	cmp	BYTE PTR -4[rbp], 47
-	jle	.L12
-	cmp	BYTE PTR -4[rbp], 57
-	jg	.L12
-.L11:
-	mov	eax, 1
-	jmp	.L14
+isAlphaOrNum:						
+	endbr64							# /
+	push	rbp						# |
+	mov	rbp, rsp					# | Пролог функции
+	sub	rsp, 8						# |
+	
+	mov	eax, edi					# | eax := edi -- загружаем в регистр eax первый аргумент (char ch)
+	mov	BYTE PTR -4[rbp], al		# | rbp[-4] := al = ch -- загружаем на стек первый аргумент из регистра 
+	movsx	eax, BYTE PTR -4[rbp]	# | eax := rbp[-4] = ch (movsx eax, byte ptr .. -- move byte to doubleword with sign-extension)
+	mov	edi, eax					# | edi := eax = ch -- загружаем ch в регистр edi для передачи первого параметра
+	call	isAlpha					# | Вызываем isAlpha(edi=ch)
+	test	eax, eax				# | test работает так же как и and, но не изменяет первый операнд и влияет только на флаговый регистр
+	jne	.L11						# |	Если isAlpha вернула через eax ненулевое значение, после test ZF=0 => прыгаем на метку .L11 
+	cmp	BYTE PTR -4[rbp], 47		# | Сравниваем ch (rbp[-4]) и 47 ('/' -- символ перед '0')
+	jle	.L12						# | Если ch <= 47, выражение ложно, переходим к возврату 0
+	cmp	BYTE PTR -4[rbp], 57		# | Сравниваем ch (rbp[-4]) и 57 ('9')
+	jg	.L12						# | Если ch > 57, выражение ложно, переходим к возврату 0
+.L11:				
+	mov	eax, 1						# | Возвращаем 1 через eax
+	jmp	.L14						# | Переходим к эпилогу
 .L12:
-	mov	eax, 0
+	mov	eax, 0						# | Возвращаем 0 через eax
 .L14:
-	leave
-	ret
+	leave							# | Эпилог функции
+	ret								# \
+	
 	.size	isAlphaOrNum, .-isAlphaOrNum
 	.globl	incrementElement
 	.type	incrementElement, @function
 incrementElement:
-	endbr64
-	push	rbp
-	mov	rbp, rsp
-	sub	rsp, 32
-	mov	QWORD PTR -24[rbp], rdi
-	mov	DWORD PTR -28[rbp], esi
-	mov	DWORD PTR -4[rbp], 0
-	jmp	.L16
+	endbr64							# /
+	push	rbp						# |
+	mov	rbp, rsp					# | Пролог функции
+	sub	rsp, 32						# |
+	
+	mov	QWORD PTR -24[rbp], rdi		# | rbp[-24] := rdi -- загружаем на стек первый переданный через rdi аргумент (char *string)
+	mov	DWORD PTR -28[rbp], esi		# | rbp[-28] := esi -- загружаем на стек второй переданный аргумент (int string_size)
+	mov	DWORD PTR -4[rbp], 0		# | rbp[-4] := 0 -- заводим счётчик i = 0 для цикла for
+	jmp	.L16						# | Переходим на метку .L16, в которой проверится условие продолжения цикла
 .L19:
-	mov	eax, DWORD PTR -4[rbp]
-	movsx	rdx, eax
-	mov	rax, rdx
-	sal	rax, 4
-	add	rax, rdx
-	sal	rax, 3
-	mov	rdx, rax
-	lea	rax, map[rip+132]
-	mov	eax, DWORD PTR [rdx+rax]
-	cmp	DWORD PTR -28[rbp], eax
-	jne	.L17
-	mov	eax, DWORD PTR -4[rbp]
-	movsx	rdx, eax
-	mov	rax, rdx
-	sal	rax, 4
-	add	rax, rdx
-	sal	rax, 3
-	mov	rdx, rax
-	lea	rax, map[rip+132]
-	mov	edx, DWORD PTR [rdx+rax]
-	mov	eax, DWORD PTR -28[rbp]
-	mov	esi, edx
-	mov	edi, eax
-	call	min
-	movsx	rcx, eax
-	mov	eax, DWORD PTR -4[rbp]
-	movsx	rdx, eax
-	mov	rax, rdx
-	sal	rax, 4
-	add	rax, rdx
-	sal	rax, 3
-	lea	rdx, map[rip]
-	lea	rdi, [rax+rdx]
-	mov	rax, QWORD PTR -24[rbp]
-	mov	rdx, rcx
-	mov	rsi, rax
-	call	strncmp@PLT
+	mov	eax, DWORD PTR -4[rbp]		# | eax := rbp[-4] = i
+	movsx	rdx, eax				# | rdx := eax = i (dword to qword sign-extension)
+	mov	rax, rdx					# | rax := rdx = i
+	sal	rax, 4						# | /
+	add	rax, rdx					# | | Считаем адрес смещение для получения map[i].key_size 
+	sal	rax, 3						# | | 
+	mov	rdx, rax					# | \ rdx := rax // Нужно сместиться на rdx относительно начала, чтобы получить map[i].key_size
+	lea	rax, map[rip+132]			# | rax := &((rip + 132)[map]) -- адрес начала map
+	mov	eax, DWORD PTR [rdx+rax]	# | eax := map[i].key_size
+	cmp	DWORD PTR -28[rbp], eax		# | Сравниваем string_size (rbp[-28]) и map[i].key_size (eax)
+	jne	.L17						# | Если map[i].key_size != string_size, условие ложно, переходим к увеличению счётчика (метка .L17)
+	mov	eax, DWORD PTR -4[rbp]		# | /
+	movsx	rdx, eax				# | |
+	mov	rax, rdx					# | |
+	sal	rax, 4						# | |
+	add	rax, rdx					# | |
+	sal	rax, 3						# | |
+	mov	rdx, rax					# |
+	lea	rax, map[rip+132]			# |
+	mov	edx, DWORD PTR [rdx+rax]	# |
+	mov	eax, DWORD PTR -28[rbp]		# |
+	mov	esi, edx					# |
+	mov	edi, eax					# |
+	call	min						# |
+	movsx	rcx, eax				# |
+	mov	eax, DWORD PTR -4[rbp]		# |
+	movsx	rdx, eax				# |
+	mov	rax, rdx					# |
+	sal	rax, 4						# |
+	add	rax, rdx					# |
+	sal	rax, 3						# |
+	lea	rdx, map[rip]				# |
+	lea	rdi, [rax+rdx]				# |
+	mov	rax, QWORD PTR -24[rbp]		# |
+	mov	rdx, rcx					# |
+	mov	rsi, rax					# |
+	call	strncmp@PLT				# |
 	test	eax, eax
 	jne	.L17
 	mov	eax, DWORD PTR -4[rbp]
@@ -167,9 +170,9 @@ incrementElement:
 .L17:
 	add	DWORD PTR -4[rbp], 1
 .L16:
-	mov	eax, DWORD PTR map_size[rip]
-	cmp	DWORD PTR -4[rbp], eax
-	jl	.L19
+	mov	eax, DWORD PTR map_size[rip]	# | eax := rip[map_size] = map_size
+	cmp	DWORD PTR -4[rbp], eax			# | Сравниваем i (rbp[-4]) и map_size (eax)
+	jl	.L19							# | Если i < map_size, совершаем итерацию цикла (тело цикла -- метка .L19)
 	mov	eax, DWORD PTR -28[rbp]
 	movsx	rcx, eax
 	mov	eax, DWORD PTR map_size[rip]
