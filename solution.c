@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <time.h>
 
+#define MAP_MAX_SIZE 100000
+#define BUFFER_MAX_SIZE 100000
+
 struct MapElement {
     char key[128];
     int value;
@@ -11,8 +14,9 @@ struct MapElement {
 };
 
 int map_size = 0;
-struct MapElement map[10000];
-char buffer[1000000];
+struct MapElement map[MAP_MAX_SIZE];
+char buffer[BUFFER_MAX_SIZE];
+char delimiters[35] = "\t\n !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 
 int min(int a, int b) {
     return a < b ? a : b;
@@ -26,12 +30,12 @@ int isAlphaOrNum(char ch) {
     return isAlpha(ch) || ('0' <= ch && ch <= '9');
 }
 
-int incrementElement(char *string, int string_size) {
+void incrementElement(char *string, int string_size) {
     for (int i = 0; i < map_size; ++i) {
         if (map[i].key_size == string_size
             && strncmp(map[i].key, string, min(string_size, map[i].key_size)) == 0) {
             ++map[i].value;
-            return map_size;
+            return;
         }
     }
 
@@ -39,7 +43,6 @@ int incrementElement(char *string, int string_size) {
     map[map_size].key_size = string_size;
     map[map_size].value = 1;
     ++map_size;
-    return map_size;
 }
 
 void parseIdentifiers(char *string) {
@@ -58,7 +61,7 @@ void parseIdentifiers(char *string) {
             char identifier[256];
             strncpy(identifier, string + begin, end - begin);
             identifier[end - begin] = '\0';
-            map_size = incrementElement(identifier, end - begin + 1);
+            incrementElement(identifier, end - begin + 1);
             begin = -1;
             end = -1;
         }
@@ -75,10 +78,14 @@ int readStringInBuffer(FILE *stream) {
 
     int pos = 0;
     int ch;
-    while ((ch = fgetc(stream)) != EOF) {
+    while ((ch = fgetc(stream)) != EOF && pos < BUFFER_MAX_SIZE - 1) {
         buffer[pos++] = (char) ch;
     }
-    buffer[pos] = '\0';
+    buffer[pos++] = '\0';
+
+    if (ch != EOF && pos == BUFFER_MAX_SIZE) {
+        return 2;
+    }
 
     return 0;
 }
@@ -112,22 +119,25 @@ char getRandomAlphaNum() {
 }
 
 char getRandomDelimiter() {
-    char delimiters[35] = "\t\n !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     return delimiters[rand() % 35];
 }
 
 int fillBufferRandomly(int n) {
     int identifiers_n = n;
 
+    if (n > (BUFFER_MAX_SIZE / 7 + 1)) {
+        return 1;
+    }
+
     int pos = 0;
     for (int i = 0; i < identifiers_n; ++i) {
-        int identifier_length = 3 + (rand() % 72);
+        int identifier_length = 1 + (rand() % 2);
         buffer[pos++] = getRandomAlpha();
         for (int j = 1; j < identifier_length; ++j) {
             buffer[pos++] = getRandomAlphaNum();
         }
 
-        int delimiter_length = 1 + (rand() % 30);
+        int delimiter_length = 1 + (rand() % 5);
         for (int j = 0; j < delimiter_length; ++j) {
             buffer[pos++] = getRandomDelimiter();
         }
@@ -149,9 +159,10 @@ int64_t measureTime(int64_t sample_size) {
     struct timespec end;
     int64_t elapsed = 0;
 
+    int identifiers_n = BUFFER_MAX_SIZE / 7 - 1;
     for (int64_t i = 0; i < sample_size; ++i) {
         map_size = 0;
-        fillBufferRandomly(1000);
+        fillBufferRandomly(identifiers_n);
         clock_gettime(CLOCK_MONOTONIC, &start);
         parseIdentifiers(buffer);
         clock_gettime(CLOCK_MONOTONIC, &end);
@@ -166,8 +177,6 @@ int main(int argc, char *argv[]) {
     FILE *input = stdin;
     FILE *output = stdout;
 
-    int file_in_flag = 0;
-    int file_out_flag = 0;
     int random_flag = 0;
     int test_flag = 0;
     int seed = 42;
@@ -183,12 +192,10 @@ int main(int argc, char *argv[]) {
                 break;
             // Указание входного файла
             case 'i':               
-                file_in_flag = 1;
                 input = fopen(optarg, "r");
                 break;
             // Указание выходного файла
             case 'o':               
-                file_out_flag = 1;
                 output = fopen(optarg, "w");
                 break;
             // seed для рандома
@@ -210,20 +217,26 @@ int main(int argc, char *argv[]) {
     srand(seed);
 
     if (test_flag) {
-        int64_t ms = measureTime(sample_size);
-        printf("%ld ms\n", ms);
-        return 0;
-    }
-    if (random_flag) {
-        fillBufferRandomly(random_n);
-        printf("%s", buffer);
+        printf("Running random tests %ld times...\n", sample_size);
+        int64_t elapsed = measureTime(sample_size);
+        printf("Elapsed time: %ld ms\n", elapsed);
         return 0;
     }
 
-    int status_code;
-    status_code = readStringInBuffer(input);
-    if (status_code != 0) {
+    int status_code = 0;
+    if (random_flag) {
+        fillBufferRandomly(random_n);
+        printf("%s", buffer);
+    } else {
+        status_code = readStringInBuffer(input);
+    }
+
+    if (status_code == 1) {
+        printf("\nError! The input file could not be read.\n");
         return 0;
+    } else if (status_code == 2) {
+        printf("\nWarning! The input string contains too many characters."
+               " Only the first %d will be read.\n", BUFFER_MAX_SIZE - 1);
     }
 
     parseIdentifiers(buffer);
