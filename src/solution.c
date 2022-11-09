@@ -19,7 +19,11 @@ char buffer[BUFFER_MAX_SIZE];
 char delimiters[35] = "\t\n !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 
 int min(int a, int b) {
-    return a < b ? a : b;
+    if (a < b) {
+        return a;
+    }
+
+    return b;
 }
 
 int isAlpha(char ch) {
