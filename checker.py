@@ -57,14 +57,14 @@ def validate(path_to_program, test_path, answer_path, verbose):
     answer_dict = make_dict(answer_data, pattern)
 
     if verbose:
-        print(f"Program output:\n{program_dict}")
+        print(f"\nProgram output:\n{program_dict}")
         print(f"Answer:\n{answer_dict}")
     
     if isinstance(program_dict, int):
         return program_dict
     return program_dict == answer_dict
 
-parser = argparse.ArgumentParser(prog='Checker for IHW2')
+parser = argparse.ArgumentParser(description='Checker for IHW2')
 parser.add_argument("path_to_program", type=file_path)
 parser.add_argument("path_to_tests", type=dir_path)
 parser.add_argument('-v', '--verbose', action='store_true')
