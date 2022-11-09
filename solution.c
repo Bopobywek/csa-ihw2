@@ -58,10 +58,11 @@ void parseIdentifiers(char *string) {
         } else if (begin >= 0 && isAlphaOrNum(string[i])) {
             end = i + 1;
         } else if (begin >= 0) {
-            char identifier[256];
-            strncpy(identifier, string + begin, end - begin);
-            identifier[end - begin] = '\0';
-            incrementElement(identifier, end - begin + 1);
+            char identifier[128];
+            int identifier_size = min(end - begin, 127);
+            strncpy(identifier, string + begin, identifier_size);
+            identifier[identifier_size] = '\0';
+            incrementElement(identifier, identifier_size + 1);
             begin = -1;
             end = -1;
         }
@@ -226,7 +227,10 @@ int main(int argc, char *argv[]) {
     int status_code = 0;
     if (random_flag) {
         fillBufferRandomly(random_n);
-        printf("%s", buffer);
+        printf("%s\n", buffer);
+    } else if (input == stdin) {
+        printf("Enter an ASCII string and finish typing with Ctrl+D\n");
+        status_code = readStringInBuffer(input);
     } else {
         status_code = readStringInBuffer(input);
     }
@@ -243,7 +247,7 @@ int main(int argc, char *argv[]) {
 
     status_code = writeMapToOutputStream(output);
     if (status_code != 0) {
-        return 0;
+        printf("\nError! Output data cannot be written.\n");
     }
 
     return 0;
