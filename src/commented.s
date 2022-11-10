@@ -4,12 +4,15 @@
 	.globl	map_size
 	.bss
 	.align 4
+	
 	.type	map_size, @object
 	.size	map_size, 4
-map_size:
+map_size:							
 	.zero	4
+
 	.comm	map,13600000,32
 	.comm	buffer,100000,32
+	
 	.globl	delimiters
 	.data
 	.align 32
@@ -17,6 +20,7 @@ map_size:
 	.size	delimiters, 35
 delimiters:
 	.ascii	"\t\n !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 	.text
 	.globl	min
 	.type	min, @function
@@ -42,7 +46,7 @@ min:
 	.type	isAlpha, @function
 isAlpha:			
 	endbr64							# /
-	push	rbp						# | Пролог фнукции
+	push	rbp						# | Пролог функции
 	mov	rbp, rsp					# |
 	
 	mov	eax, edi					# | eax := edi -- загружаем в регистр eax первый аргумент (char ch)
@@ -173,153 +177,161 @@ incrementElement:
 	mov	eax, DWORD PTR map_size[rip]	# | eax := rip[map_size] = map_size
 	cmp	DWORD PTR -4[rbp], eax			# | Сравниваем i (rbp[-4]) и map_size (eax)
 	jl	.L19							# | Если i < map_size, совершаем итерацию цикла (тело цикла -- метка .L19)
-	mov	eax, DWORD PTR -28[rbp]
-	movsx	rcx, eax
-	mov	eax, DWORD PTR map_size[rip]
-	movsx	rdx, eax
-	mov	rax, rdx
-	sal	rax, 4
-	add	rax, rdx
-	sal	rax, 3
-	lea	rdx, map[rip]
-	lea	rdi, [rax+rdx]
-	mov	rax, QWORD PTR -24[rbp]
-	mov	rdx, rcx
-	mov	rsi, rax
-	call	strncpy@PLT
-	mov	eax, DWORD PTR map_size[rip]
-	movsx	rdx, eax
-	mov	rax, rdx
-	sal	rax, 4
-	add	rax, rdx
-	sal	rax, 3
-	mov	rcx, rax
-	lea	rdx, map[rip+132]
-	mov	eax, DWORD PTR -28[rbp]
-	mov	DWORD PTR [rcx+rdx], eax
-	mov	eax, DWORD PTR map_size[rip]
-	movsx	rdx, eax
-	mov	rax, rdx
-	sal	rax, 4
-	add	rax, rdx
-	sal	rax, 3
-	mov	rdx, rax
-	lea	rax, map[rip+128]
-	mov	DWORD PTR [rdx+rax], 1
-	mov	eax, DWORD PTR map_size[rip]
-	add	eax, 1
-	mov	DWORD PTR map_size[rip], eax
+	mov	eax, DWORD PTR -28[rbp]			# | eax := rbp[-28] = string_size
+	movsx	rcx, eax					# | rcx := eax = string_size (dword to qword sign-extension)
+	mov	eax, DWORD PTR map_size[rip]	# | eax := rip[map_size] = map_size
+	movsx	rdx, eax					# | rdx := eax = map_size (dword to qword sign-extension)
+	mov	rax, rdx						# | rax := rdx = map_size
+	sal	rax, 4							# | /
+	add	rax, rdx						# | |
+	sal	rax, 3							# | \
+	lea	rdx, map[rip]					# | rdx := &rip[map] -- адрес начала map
+	lea	rdi, [rax+rdx]					# | rdi := &([rax + rdx]) -- адрес map[map_size].key теперь в rdi через который передаем первый аргумент
+	mov	rax, QWORD PTR -24[rbp]			# | rax := rbp[-24] = string
+	mov	rdx, rcx						# | rdx := rcx = string_size -- третий аргумент для вызова strncpy
+	mov	rsi, rax						# | rsi := rax = string -- второй аргумент для вызова strncpy
+	call	strncpy@PLT					# | Вызываем strncpy(rdi=map[map_size].key, rsi=string, rdx=string_size)
+	mov	eax, DWORD PTR map_size[rip]	# | eax := rip[map_size] = map_size
+	movsx	rdx, eax					# | /
+	mov	rax, rdx						# |	|
+	sal	rax, 4							# |	|
+	add	rax, rdx						# |	|
+	sal	rax, 3							# | |
+	mov	rcx, rax						# | \
+	lea	rdx, map[rip+132]				# | rdx := &((rip + 132)[map]) -- адрес key_size нулевого элемента
+	mov	eax, DWORD PTR -28[rbp]			# | eax := rbp[-28] = string_size
+	mov	DWORD PTR [rcx+rdx], eax		# | [rcx + rdx] := eax <=> map[map_size].key_size = string_size
+	mov	eax, DWORD PTR map_size[rip]	# | eax := rip[map_size]
+	movsx	rdx, eax					# |
+	mov	rax, rdx						# |
+	sal	rax, 4							# |
+	add	rax, rdx						# |
+	sal	rax, 3							# |
+	mov	rdx, rax						# |
+	lea	rax, map[rip+128]				# |  	
+	mov	DWORD PTR [rdx+rax], 1			# |	
+	mov	eax, DWORD PTR map_size[rip]	# |
+	add	eax, 1							# | eax := eax + 1 <=> ++map_size
+	mov	DWORD PTR map_size[rip], eax	# |
 .L15:
-	leave
-	ret
+	leave								# | Эпилог
+	ret									# \
 	.size	incrementElement, .-incrementElement
 	.globl	parseIdentifiers
 	.type	parseIdentifiers, @function
 parseIdentifiers:
-	endbr64
-	push	rbp
-	mov	rbp, rsp
-	sub	rsp, 176
-	mov	QWORD PTR -168[rbp], rdi
-	mov	DWORD PTR -4[rbp], -1
-	mov	DWORD PTR -8[rbp], -1
-	mov	DWORD PTR -12[rbp], 1
-	mov	DWORD PTR -16[rbp], 0
-	jmp	.L21
+	endbr64								# /
+	push	rbp							# |
+	mov	rbp, rsp						# | Пролог функции
+	sub	rsp, 176						# |
+	
+	mov	QWORD PTR -168[rbp], rdi		# | rbp[-168] := rdi -- загружаем на стек первый аргумент (char *string)
+										# | Загружаем значения локальных переменных на стек
+	mov	DWORD PTR -4[rbp], -1			# | rbp[-4] := -1 <=> int begin = -1 
+	mov	DWORD PTR -8[rbp], -1			# | rbp[-8] := -1 <=> int end = -1
+	mov	DWORD PTR -12[rbp], 1			# | rbp[-12] := 1 <=> int is_delimiter_previous = 1
+	mov	DWORD PTR -16[rbp], 0			# | rbp[-16] := 0 -- заводим счётчик i <=> int i = 0
+	jmp	.L21							# | Переходим к проверке условия продолжения цикла
 .L25:
-	cmp	DWORD PTR -12[rbp], 0
-	je	.L22
-	cmp	DWORD PTR -4[rbp], 0
-	jns	.L22
-	mov	eax, DWORD PTR -16[rbp]
-	movsx	rdx, eax
-	mov	rax, QWORD PTR -168[rbp]
-	add	rax, rdx
-	movzx	eax, BYTE PTR [rax]
-	movsx	eax, al
-	mov	edi, eax
-	call	isAlpha
-	test	eax, eax
-	je	.L22
-	mov	eax, DWORD PTR -16[rbp]
-	mov	DWORD PTR -4[rbp], eax
-	mov	eax, DWORD PTR -16[rbp]
-	add	eax, 1
-	mov	DWORD PTR -8[rbp], eax
-	jmp	.L23
+										# | Проверяем if (is_delimiter_previous && begin < 0 && isAlpha(string[i]))
+	cmp	DWORD PTR -12[rbp], 0			# | Сравниваем is_delimiter_previous (rbp[-12]) и 0
+	je	.L22							# | Если is_delimiter_previous == 0, выражение ложно, поэтому переходим к else if (метка .L22)
+	cmp	DWORD PTR -4[rbp], 0			# | Сравниваем begin (rbp[-4]) и 0
+	jns	.L22							# | Если begin >= 0 (=> старший бит = 0), выражение ложно, переходим к else if (метка .L22)
+	mov	eax, DWORD PTR -16[rbp]			# | eax := rbp[-16] = i
+	movsx	rdx, eax					# | rdx := eax = i (dword to qword sign-extension)
+	mov	rax, QWORD PTR -168[rbp]		# | rax := rbp[-168] = string
+	add	rax, rdx						# | rax := rax + rdx <=> rax := (string + i)
+	movzx	eax, BYTE PTR [rax]			# | eax := [rax] <=> eax := string[i] (byte to dword zero-extension)
+	movsx	eax, al						# | eax := al (word to dword sign-extension)
+	mov	edi, eax						# | edi := eax = string[i] -- первый аргумент для вызова isAlpha загружаем в edi
+	call	isAlpha						# | Вызываем isAlpha(edi=string[i])
+	test	eax, eax					# | Побитовое И без изменения самого eax
+	je	.L22							# | Если в eax был ноль, выражение ложно, переходим к else if (метка .L22)
+										# | Иначе выражение истинно, переходим к телу условного оператора
+	mov	eax, DWORD PTR -16[rbp]			# | eax := rbp[-16] = i
+	mov	DWORD PTR -4[rbp], eax			# | rbp[-4] := eax = i <=> begin = i
+	mov	eax, DWORD PTR -16[rbp]			# | eax := rbp[-16] = i
+	add	eax, 1							# | eax := eax + 1 = i + 1
+	mov	DWORD PTR -8[rbp], eax			# | rbp[-8] := eax <=> end = i + 1
+	jmp	.L23							# | Переходим на метку .L23
 .L22:
-	cmp	DWORD PTR -4[rbp], 0
-	js	.L24
-	mov	eax, DWORD PTR -16[rbp]
-	movsx	rdx, eax
-	mov	rax, QWORD PTR -168[rbp]
-	add	rax, rdx
-	movzx	eax, BYTE PTR [rax]
-	movsx	eax, al
-	mov	edi, eax
-	call	isAlphaOrNum
-	test	eax, eax
-	je	.L24
-	mov	eax, DWORD PTR -16[rbp]
-	add	eax, 1
-	mov	DWORD PTR -8[rbp], eax
-	jmp	.L23
+										# | else if (begin >= 0 && isAlphaOrNum(string[i]))
+	cmp	DWORD PTR -4[rbp], 0			# | Сравниваем begin (rbp[-4]) и 0
+	js	.L24							# | Если begin < 0 (=> старший бит = 1), выражение ложно, переходим к последнему else if (метка .L24)
+	mov	eax, DWORD PTR -16[rbp]			# | eax := rbp[-16] = i
+	movsx	rdx, eax					# | rdx := eax = i (dword to qword sign-extension)
+	mov	rax, QWORD PTR -168[rbp]		# | rax := rbp[-168] = string
+	add	rax, rdx						# | rax := rax + rdx <=> rax := (string + i) -- адрес i-ого символа
+	movzx	eax, BYTE PTR [rax]			# | eax := [rax] <=> eax := string[i] (byte to dword zero-extension)
+	movsx	eax, al						# | eax := al = string[i] (word to dword sign-extension)
+	mov	edi, eax						# | edi := eax = string[i] -- передаем первый аргумент через edi
+	call	isAlphaOrNum				# | Вызываем isAlphaOrNum(edi=string[i])
+	test	eax, eax					# | Побитовое И без изменения самого eax
+	je	.L24							# | Если в eax был ноль, выражение ложно, переходим к последнему else if
+	mov	eax, DWORD PTR -16[rbp]			# | eax := rbp[-16] = i
+	add	eax, 1							# | eax := eax + 1 = i + 1
+	mov	DWORD PTR -8[rbp], eax			# | end = rbp[-8] := eax = i + 1
+	jmp	.L23							# | Переходим на метку .L23
 .L24:
-	cmp	DWORD PTR -4[rbp], 0
-	js	.L23
-	mov	eax, DWORD PTR -8[rbp]
-	sub	eax, DWORD PTR -4[rbp]
-	mov	esi, 127
-	mov	edi, eax
-	call	min
-	mov	DWORD PTR -20[rbp], eax
-	mov	eax, DWORD PTR -20[rbp]
-	movsx	rdx, eax
-	mov	eax, DWORD PTR -4[rbp]
-	movsx	rcx, eax
-	mov	rax, QWORD PTR -168[rbp]
-	add	rcx, rax
-	lea	rax, -160[rbp]
-	mov	rsi, rcx
-	mov	rdi, rax
-	call	strncpy@PLT
-	mov	eax, DWORD PTR -20[rbp]
-	cdqe
-	mov	BYTE PTR -160[rbp+rax], 0
-	mov	eax, DWORD PTR -20[rbp]
-	lea	edx, 1[rax]
-	lea	rax, -160[rbp]
-	mov	esi, edx
-	mov	rdi, rax
-	call	incrementElement
-	mov	DWORD PTR -4[rbp], -1
-	mov	DWORD PTR -8[rbp], -1
+	cmp	DWORD PTR -4[rbp], 0			# | Сравниваем begin (rbp[-4]) и 0
+	js	.L23							# | Если begin < 0 (=> старший бит = 1), выражение ложно, переходим на метку .L23
+	mov	eax, DWORD PTR -8[rbp]			# | eax := rbp[-8] = end
+	sub	eax, DWORD PTR -4[rbp]			# | eax := eax - rbp[-4] = end - begin
+	mov	esi, 127						# | esi := 127 -- передаем второй аргумент для вызова min через esi
+	mov	edi, eax						# | edi := eax = end - begin -- передаем первый аргумент для вызова min через edi
+	call	min							# | Вызываем min(edi=end-begin, esi=127)
+										# | min вернула минимальное значение через eax
+	mov	DWORD PTR -20[rbp], eax			# | int identifier_size = rbp[-20] := eax = возвращенное min значение
+	mov	eax, DWORD PTR -20[rbp]			# | eax := rbp[-20] = identifier_size
+	movsx	rdx, eax					# | rdx := eax = identifier_size (dword to qword sign-extension) -- через rdx передаем третий аргумент для вызова функции
+	mov	eax, DWORD PTR -4[rbp]			# | eax := rbp[-4] = begin
+	movsx	rcx, eax					# | rcx := eax = begin (dword to qword sign-extension)
+	mov	rax, QWORD PTR -168[rbp]		# | rax := rbp[-168] = string
+	add	rcx, rax						# | rcx := rcx + rax = (string + begin)
+	lea	rax, -160[rbp]					# | rax := &(rbp[-160]) = identifier -- адрес начала массива char identifier[128]
+	mov	rsi, rcx						# | rsi := rcx = (string + begin) -- через rsi передаем второй аргумент для вызова функции
+	mov	rdi, rax						# | rdi := rax = identifier -- передаем через rdi первый аргумент
+	call	strncpy@PLT					# | Вызываем strncpy(rdi=identifier, rsi=string + begin, rdx=identifier_size)
+	mov	eax, DWORD PTR -20[rbp]			# | eax := rbp[-20] = identifier_size
+	cdqe								# | rax := sign-extend of eax. Копирует знак (31 бит) в старшие 32 бита регистра rax
+	mov	BYTE PTR -160[rbp+rax], 0		# | (rbp+rax)[-160] = 0 <=> identifier[identifier_size] = '\0'
+	mov	eax, DWORD PTR -20[rbp]			# | eax := rbp[-20] = identifier_size
+	lea	edx, 1[rax]						# | edx := &(rax[1]) = rax + 1 = identifier_size + 1
+	lea	rax, -160[rbp]					# | rax := &(rbp[-160]) -- адрес начала массива identifier
+	mov	esi, edx						# | esi := edx = identifier_size + 1 -- передаем второй аргумент в функцию
+	mov	rdi, rax						# | rdi := rax = identifier -- передаем первый аргумент в функцию
+	call	incrementElement			# |  Вызываем incrementElement(rdi=identifier, esi=identifier_size + 1)
+	mov	DWORD PTR -4[rbp], -1			# | begin = rbp[-4] := -1
+	mov	DWORD PTR -8[rbp], -1			# | end = rbp[-8] := -1
 .L23:
-	mov	eax, DWORD PTR -16[rbp]
-	movsx	rdx, eax
-	mov	rax, QWORD PTR -168[rbp]
-	add	rax, rdx
-	movzx	eax, BYTE PTR [rax]
-	movsx	eax, al
-	mov	edi, eax
-	call	isAlphaOrNum
-	test	eax, eax
-	sete	al
-	movzx	eax, al
-	mov	DWORD PTR -12[rbp], eax
-	add	DWORD PTR -16[rbp], 1
+	mov	eax, DWORD PTR -16[rbp]		# | eax := rbp[-16] = i
+	movsx	rdx, eax				# | rdx := eax = i (dword to qword sign-extension)
+	mov	rax, QWORD PTR -168[rbp]	# | rax := rbp[-168] = string
+	add	rax, rdx					# | rax := rax + rdx <=> rax := (string + i)
+	movzx	eax, BYTE PTR [rax]		# | eax := [rax] <=> eax := string[i] (byte to dword zero-extension)
+	movsx	eax, al					# | eax := al (word to dword sign-extension)
+	mov	edi, eax					# | edi := eax = string[i] -- загружаем в edi первый аргумент
+	call	isAlphaOrNum			# | Вызываем isAlphaOrNum(edi=string[i])
+	test	eax, eax				# |	Побитовое И без изменения самого eax
+	sete	al						# | Если в eax было ненулевое значение => ZF = 0 => sete установит 0 в al. Иначе ZF = 1 => sete установит 1 в al
+	movzx	eax, al					# | eax := al (word to dword zero-extension)
+	mov	DWORD PTR -12[rbp], eax		# | rbp[-12] := eax
+	add	DWORD PTR -16[rbp], 1		# | ++i
 .L21:
-	mov	eax, DWORD PTR -16[rbp]
-	movsx	rdx, eax
-	mov	rax, QWORD PTR -168[rbp]
-	add	rax, rdx
-	movzx	eax, BYTE PTR [rax]
-	test	al, al
-	jne	.L25
-	nop
-	nop
-	leave
-	ret
+	mov	eax, DWORD PTR -16[rbp]		# | eax := rbp[-16] = i
+	movsx	rdx, eax				# | rdx := eax = i (dword to qword sign-extension)
+	mov	rax, QWORD PTR -168[rbp]	# | rax := rbp[-168] = string
+	add	rax, rdx					# | rax := rax + rdx <=> string + i -- получаем адрес i-ого элемента
+	movzx	eax, BYTE PTR [rax]		# | eax := [rax] <=> eax := *(rax) <=> eax := string[i] (byte to dword with zero-extension)
+	test	al, al					# | Побитовое И без изменения самого al 
+	jne	.L25						# | Если al != 0 => ZF = 0 => переход на следующую итерацию цикла
+	
+	nop								# | Выравнивание 
+	nop								# | Выравнивание
+	
+	leave							# | Эпилог функции
+	ret								# \
 	.size	parseIdentifiers, .-parseIdentifiers
 	.globl	readStringInBuffer
 	.type	readStringInBuffer, @function
