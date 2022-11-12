@@ -38,19 +38,29 @@ def make_dict(data, pattern):
     return dictionary
 
 
-def validate(path_to_program, test_path, answer_path, verbose):
+def validate(path_to_program, test_path, answer_path, verbose, use_files=False):
     with open(test_path, mode="r") as fin:
         test_data = fin.read()
 
     with open(answer_path, mode="r") as fin:
         answer_data = fin.readlines()
     
-    process = subprocess.Popen([path_to_program], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    process.stdin.write(test_data.encode())
-    process.stdin.close()
+    path_to_log = os.path.abspath(os.path.join(os.getcwd(), "test_log"))
+    command = [path_to_program, "-i", test_path, "-o", path_to_log] if use_files else [path_to_program]
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    if not use_files:
+        process.stdin.write(test_data.encode())
+        process.stdin.close()
+    
     process.wait()
     
-    out_data = [string.decode("utf-8") for string in process.stdout.readlines()]
+    out_data = ""
+    if use_files:
+        fin = open("./test_log", mode="r")
+        out_data = fin.readlines()
+        fin.close()
+    else:
+        out_data = [string.decode("utf-8") for string in process.stdout.readlines()]
     pattern = re.compile("^[A-Za-z][A-Za-z0-9]* : \d+$")
 
     program_dict = make_dict(out_data, pattern)
@@ -59,6 +69,8 @@ def validate(path_to_program, test_path, answer_path, verbose):
     if verbose:
         print(f"\nProgram output:\n{program_dict}")
         print(f"Answer:\n{answer_dict}")
+    elif use_files:
+        os.remove("./test_log") 
     
     if isinstance(program_dict, int):
         return program_dict
@@ -67,6 +79,7 @@ def validate(path_to_program, test_path, answer_path, verbose):
 parser = argparse.ArgumentParser(description='Checker for IHW2')
 parser.add_argument("path_to_program", type=file_path)
 parser.add_argument("path_to_tests", type=dir_path)
+parser.add_argument('-f', '--use-files', dest="use_files", action='store_true')
 parser.add_argument('-v', '--verbose', action='store_true')
 
 args = parser.parse_args()
@@ -84,15 +97,21 @@ for filename in os.listdir(args.path_to_tests):
     elif os.path.isfile(full_filename) and os.path.isfile(full_answer_filename):
         tests[full_filename] = full_answer_filename
 
+total = 0
+passed = 0
+error = 0
 for test_path, answer_path in tests.items():
-    result = validate(args.path_to_program, test_path, answer_path, args.verbose)
+    result = validate(args.path_to_program, test_path, answer_path, args.verbose, use_files=args.use_files)
     if (result == 2):
-        print(f"Error | {test_path} | Program output contains duplicates")
+        error += 1
+        print(f"Error | {test_path:^} | Program output contains duplicates")
     elif (result == 1):
-        print(f"Info | {test_path} | Passed")
+        passed += 1
+        print(f"Info | {test_path:^} | Passed")
     else:
-        print(f"Error | {test_path} | Program output and answer are different")
-
+        error += 1
+        print(f"Error | {test_path:^} | Program output and answer are different")
+    total += 1
 
 # Usage: ./checker.py path_to_program path_to_tests
 
