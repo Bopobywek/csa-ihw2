@@ -107,7 +107,7 @@ for test_path, answer_path in tests.items():
         print(f"Error | {test_path:^} | Program output contains duplicates")
     elif (result == 1):
         passed += 1
-        print(f"Info | {test_path:^} | Passed")
+        print(f"Info  | {test_path:^} | Passed")
     else:
         error += 1
         print(f"Error | {test_path:^} | Program output and answer are different")
