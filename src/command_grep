@@ -1,3 +1,0 @@
-grep -E "(^\s[^#].*$)|(^[a-zA-Z0-9.].*$)" solution.s > log_count 
-
-grep -v -e '^[[:space:]]*$' -e '^\s*#'
