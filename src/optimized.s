@@ -1,4 +1,3 @@
-	.file	"solution.c"
 	.intel_syntax noprefix
 	.text
 	.globl	map_size
