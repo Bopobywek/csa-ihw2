@@ -137,3 +137,41 @@ gcc reduced.s -o reduced
 ### Добавление комментариев в разработанную программу
 Исходный код оптимизированной программы: [optimized.s](src/optimized.s) (прокомментирован)
 
+### Тестирование полученной программы
+Для тестирования используем [checker.py](checker.py) и тесты из директории [tests](tests/)
+
+Согласно условию будем сравнивать результаты тестовых прогонов с результатами тестовых прогонов программы на языке C
+
+```console
+gcc src/solution.c -o src/solution
+gcc src/optimized.s -o src/optimized
+```
+
+В первую очередь протестируем консольный ввод/вывод:
+```console
+./checker.py -v src/optimized tests/
+./checker.py -v src/solution tests/
+```
+[optimized.s](src/optimized.s)            | [solution.c](src/solution.c)&nbsp;&nbsp;
+:-------------------------:|:-------------------------:
+![](screenshots/test_optimized_console.jpg)  |  ![](screenshots/test_solution_console.jpg)
+
+Теперь проверим файловый ввод/вывод. Для этого запустим чекер с опцией `-f`:
+```console
+./checker.py -fv src/optimized tests/
+./checker.py -fv src/solution tests/
+```
+[optimized.s](src/optimized.s)            | [solution.c](src/solution.c)&nbsp;&nbsp;
+:-------------------------:|:-------------------------:
+![](screenshots/test_optimized_file.jpg)  |  ![](screenshots/test_solution_file.jpg)
+
+Не забудем проверить, что функции для генерации случайных тестов работают корректно:
+
+[optimized.s](src/optimized.s)            | [solution.c](src/solution.c)&nbsp;&nbsp;
+:-------------------------:|:-------------------------:
+![](screenshots/test_optimized_random.jpg)  |  ![](screenshots/test_solution_random.jpg)
+
+Для всех тестовых прогонов получили одинаковый результат.
+
+
+
